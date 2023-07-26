@@ -324,6 +324,12 @@ bool mc_nn_tilde::has_settable_attribute(std::string attribute) {
 }
 
 void mc_nn_tilde::reset_buffers() {
+  bool reset_thread = false;
+  if (m_use_thread && m_compute_thread) {
+    reset_thread = !m_should_stop_perform_thread;
+    m_should_stop_perform_thread = true;
+    m_compute_thread->join();
+  }
   auto params = m_model->get_method_params(m_method);
   m_in_dim = params[0] * get_batches();
   m_out_dim = params[2] * get_batches();
@@ -338,6 +344,10 @@ void mc_nn_tilde::reset_buffers() {
   for (int i(0); i < m_out_dim; i++) {
     m_out_buffer[i].initialize(m_buffer_size);
     m_out_model.push_back(std::make_unique<float[]>(m_buffer_size));
+  }
+  if (reset_thread) {
+    m_should_stop_perform_thread = false;
+    m_compute_thread = std::make_unique<std::thread>(model_perform_loop, this);
   }
 }
 

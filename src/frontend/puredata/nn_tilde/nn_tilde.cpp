@@ -139,7 +139,14 @@ void *nn_tilde_new(t_symbol *s, int argc, t_atom *argv) {
   x->m_in_ratio = 1;
   x->m_out_dim = 1;
   x->m_out_ratio = 1;
+#ifdef _WIN32
+  // Calling forward in a thread causes memory leak in windows.
+  // Defaulting to buffer_size = 0
+  // See https://github.com/pytorch/pytorch/issues/24237
+  x->m_buffer_size = 0;
+#else
   x->m_buffer_size = 4096;
+#endif
   x->m_method = gensym("forward");
   x->m_enabled = 1;
   x->m_use_thread = true;

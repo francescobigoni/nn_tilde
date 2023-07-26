@@ -201,6 +201,14 @@ mc_nn_tilde::mc_nn_tilde(const atoms &args)
       m_use_thread(true), m_data_available_lock(0), m_result_available_lock(1),
       m_should_stop_perform_thread(false) {
   m_model = std::make_unique<Backend>();
+
+#ifdef _WIN32
+  // Calling forward in a thread causes memory leak in windows.
+  // Defaulting to buffer_size = 0
+  // See https://github.com/pytorch/pytorch/issues/24237
+  m_buffer_size = 0;
+#endif
+
   // CHECK ARGUMENTS
   if (!args.size()) {
     return;
@@ -265,12 +273,6 @@ mc_nn_tilde::mc_nn_tilde(const atoms &args)
   } else {
     m_buffer_size = power_ceil(m_buffer_size);
   }
-
-// Calling forward in a thread causes memory leak in windows.
-// See https://github.com/pytorch/pytorch/issues/24237
-#ifdef _WIN32
-  m_use_thread = false;
-#endif
 
   // CREATE INLETS, OUTLETS and BUFFERS
   m_in_buffer = std::make_unique<circular_buffer<double, float>[]>(

@@ -186,6 +186,13 @@ nn::nn(const atoms &args)
       m_use_thread(true), m_data_available_lock(0), m_result_available_lock(1),
       m_should_stop_perform_thread(false) {
 
+  // Calling forward in a thread causes memory leak in windows.
+  // Defaulting to buffer_size = 0
+  // See https://github.com/pytorch/pytorch/issues/24237
+#ifdef _WIN32
+  m_buffer_size = 0;
+#endif
+
   m_model = std::make_unique<Backend>();
   m_is_backend_init = true;
 
@@ -235,6 +242,7 @@ nn::nn(const atoms &args)
   m_out_dim = params[2];
   m_out_ratio = params[3];
 
+
   if (!m_buffer_size) {
     // NO THREAD MODE
     m_use_thread = false;
@@ -245,12 +253,6 @@ nn::nn(const atoms &args)
   } else {
     m_buffer_size = power_ceil(m_buffer_size);
   }
-
-  // Calling forward in a thread causes memory leak in windows.
-  // See https://github.com/pytorch/pytorch/issues/24237
-#ifdef _WIN32
-  m_use_thread = false;
-#endif
 
   // CREATE INLETS, OUTLETS and BUFFERS
   m_in_buffer = std::make_unique<circular_buffer<double, float>[]>(m_in_dim);
